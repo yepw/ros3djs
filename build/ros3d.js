@@ -179,7 +179,6 @@ ROS3D.closestAxisPoint = function(axisRay, camera, mousePos) {
  *   * url - the URL of the stream
  *   * streamType (optional) - the stream type: mjpeg or vp8 video (defaults to vp8)
  *   * f (optional) - the camera's focal length (defaults to standard Kinect calibration)
- *   * maxDepthPerTile (optional) - the factor with which we control the desired depth range (defaults to 1.0)
  *   * pointSize (optional) - point size (pixels) for rendered point cloud
  *   * width (optional) - width of the video stream
  *   * height (optional) - height of the video stream
@@ -193,7 +192,6 @@ ROS3D.DepthCloud = function(options) {
   this.url = options.url;
   this.streamType = options.streamType || 'vp8';
   this.f = options.f || 526;
-  this.maxDepthPerTile = options.maxDepthPerTile || 1.0;
   this.pointSize = options.pointSize || 3;
   this.width = options.width || 1024;
   this.height = options.height || 1024;
@@ -227,7 +225,6 @@ ROS3D.DepthCloud = function(options) {
     'uniform float zOffset;',
     '',
     'uniform float focallength;',
-    'uniform float maxDepthPerTile;',
     '',
     'varying vec2 vUvP;',
     'varying vec2 colorP;',
@@ -331,9 +328,9 @@ ROS3D.DepthCloud = function(options) {
     '    float z = -depth;',
     '    ',
     '    pos = vec4(',
-    '      ( position.x / width - 0.5 ) * z * 0.5 * maxDepthPerTile * (1000.0/focallength) * -1.0,',
-    '      ( position.y / height - 0.5 ) * z * 0.5 * maxDepthPerTile * (1000.0/focallength),',
-    '      (- z + zOffset / 1000.0) * maxDepthPerTile,',
+    '      ( position.x / width - 0.5 ) * z * (1000.0/focallength) * -1.0,',
+    '      ( position.y / height - 0.5 ) * z * (1000.0/focallength),',
+    '      (- z + zOffset / 1000.0) * 2.0,',
     '      1.0);',
     '    ',
     '    vec2 maskP = vec2( position.x / (width*2.0), position.y / (height*2.0)  );',
@@ -448,11 +445,7 @@ ROS3D.DepthCloud.prototype.initStreamer = function() {
         'varianceThreshold' : {
           type : 'f',
           value : this.varianceThreshold
-        },
-        'maxDepthPerTile': {
-          type : 'f',
-          value : this.maxDepthPerTile
-        },
+        }
       },
       vertexShader : this.vertex_shader,
       fragmentShader : this.fragment_shader
@@ -2630,46 +2623,34 @@ ROS3D.MeshResource = function(options) {
         console.warn(message);
       }
     };
-    loader.load(
-      uri,
-      function colladaReady(collada) {
-        // check for a scale factor in ColladaLoader2
-        // add a texture to anything that is missing one
-        if(material !== null) {
-          collada.scene.traverse(function(child) {
-            if(child instanceof THREE.Mesh) {
-              if(child.material === undefined) {
-                child.material = material;
-              }
+    loader.load(uri, function colladaReady(collada) {
+      // check for a scale factor in ColladaLoader2
+      // add a texture to anything that is missing one
+      if(material !== null) {
+        collada.scene.traverse(function(child) {
+          if(child instanceof THREE.Mesh) {
+            if(child.material === undefined) {
+              child.material = material;
             }
-          });
-        }
+          }
+        });
+      }
 
-        that.add(collada.scene);
-      },
-      /*onProgress=*/null,
-      function onLoadError(error) {
-        console.error(error);
-      });
+      that.add(collada.scene);
+    });
   } else if (fileType === '.stl') {
     loader = new THREE.STLLoader();
     {
-      loader.load(uri,
-                  function ( geometry ) {
-                    geometry.computeFaceNormals();
-                    var mesh;
-                    if(material !== null) {
-                      mesh = new THREE.Mesh( geometry, material );
-                    } else {
-                      mesh = new THREE.Mesh( geometry,
-                                             new THREE.MeshBasicMaterial( { color: 0x999999 } ) );
-                    }
-                    that.add(mesh);
-                  },
-                  /*onProgress=*/null,
-                  function onLoadError(error) {
-                    console.error(error);
-                  });
+      loader.load(uri, function ( geometry ) {
+        geometry.computeFaceNormals();
+        var mesh;
+        if(material !== null) {
+          mesh = new THREE.Mesh( geometry, material );
+        } else {
+          mesh = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { color: 0x999999 } ) );
+        }
+        that.add(mesh);
+      } );
     }
   }
 };
@@ -3526,19 +3507,22 @@ ROS3D.PoseWithCovariance.prototype.processMessage = function(message){
  * @param options - object with following keys:
  *
  *  * ros - the ROSLIB.Ros connection handle
- *  * topic - the marker topic to listen to (default '/scan')
+ *  * topic - the marker topic to listen to
  *  * tfClient - the TF client handle to use
- *  * rootObject (optional) - the root object to add this marker to use for the points.
- *  * max_pts (optional) - number of points to draw (default: 10000)
- *  * pointRatio (optional) - point subsampling ratio (default: 1, no subsampling)
- *  * messageRatio (optional) - message subsampling ratio (default: 1, no subsampling)
- *  * material (optional) - a material object or an option to construct a PointsMaterial.
+ *  * color - (optional) color of the points (default 0xFFA500)
+ *  * texture - (optional) Image url for a texture to use for the points. Defaults to a single white pixel.
+ *  * rootObject (optional) - the root object to add this marker to
+ *  * size (optional) - size to draw each point (default 0.05)
+ *  * max_pts (optional) - number of points to draw (default 100)
  */
 ROS3D.LaserScan = function(options) {
   options = options || {};
   this.ros = options.ros;
   this.topicName = options.topic || '/scan';
-  this.points = new ROS3D.Points(options);
+  this.color = options.color || 0xFFA500;
+
+  this.particles = new ROS3D.Particles(options);
+
   this.rosTopic = undefined;
   this.subscribe();
 
@@ -3565,154 +3549,191 @@ ROS3D.LaserScan.prototype.subscribe = function(){
 };
 
 ROS3D.LaserScan.prototype.processMessage = function(message){
-  if(!this.points.setup(message.header.frame_id)) {
-      return;
-  }
+  setFrame(this.particles, message.header.frame_id);
+
   var n = message.ranges.length;
-  var j = 0;
-  for(var i=0;i<n;i+=this.points.positionRatio){
+  for(var i=0;i<n;i++){
     var range = message.ranges[i];
-    if(range >= message.range_min && range <= message.range_max){
+    if(range < message.range_min || range > message.range_max){
+      this.particles.alpha[i] = 0.0;
+    }else{
         var angle = message.angle_min + i * message.angle_increment;
-        this.points.positions.array[j++] = range * Math.cos(angle);
-        this.points.positions.array[j++] = range * Math.sin(angle);
-        this.points.positions.array[j++] = 0.0;
+        this.particles.points[i] = new THREE.Vector3( range * Math.cos(angle), range * Math.sin(angle), 0.0 );
+        this.particles.alpha[i] = 1.0;
     }
+    this.particles.colors[ i ] = new THREE.Color( this.color );
   }
-  this.points.update(j/3);
-};
 
-/**
- * @author Mathieu Bredif!! - mathieu.bredif@ign.fr
- */
-
-/**
- * A NavSatFix client that listens to a given topic and displays a line connecting the gps fixes.
- *
- * @constructor
- * @param options - object with following keys:
- *
- *  * ros - the ROSLIB.Ros connection handle
- *  * topic - the NavSatFix topic to listen to
- *  * rootObject (optional) - the root object to add this marker to
- *  * color (optional) - color for line (default: 0xcc00ff)
- *  * altitudeNaN (optional) - default altitude when the message altitude is NaN (default: 0)
- *  * keep (optional) - number of gps fix points to keep (default: 100)
- *  * convert (optional) - conversion from lat/lon/alt to xyz (default: passthrough)
- */
-ROS3D.NavSatFix = function(options) {
-  options = options || {};
-  this.ros = options.ros;
-  this.topicName = options.topic || '/gps/fix';
-  this.color = options.color || 0xcc00ff;
-  this.altitudeNaN = options.altitudeNaN || 0;
-  this.convert = options.convert || function(lon,lat,alt) { return new THREE.Vector3(lon,lat,alt); };
-  this.rootObject = options.rootObject || new THREE.Object3D();
-  this.keep = options.keep || 100;
-  this.count = 0;
-  this.next1 = 0;
-  this.next2 = this.keep;
-  THREE.Object3D.call(this);
-
-  this.geom = new THREE.BufferGeometry();
-  this.vertices = new THREE.BufferAttribute(new Float32Array( 6 * this.keep ), 3 );
-  this.geom.addAttribute( 'position',  this.vertices);
-  this.material = new THREE.LineBasicMaterial( { color: this.color } );
-  this.object = new THREE.Line( this.geom, this.material );
-  this.group = new THREE.Group();
-  this.add(this.group);
-  this.add(this.object);
-  this.rootObject.add(this);
-
-  this.rosTopic = undefined;
-  this.subscribe();
-};
-ROS3D.NavSatFix.prototype.__proto__ = THREE.Object3D.prototype;
-
-
-ROS3D.NavSatFix.prototype.unsubscribe = function(){
-  if(this.rosTopic){
-    this.rosTopic.unsubscribe();
-  }
-};
-
-ROS3D.NavSatFix.prototype.subscribe = function(){
-  this.unsubscribe();
-
-  // subscribe to the topic
-  this.rosTopic = new ROSLIB.Topic({
-      ros : this.ros,
-      name : this.topicName,
-      messageType : 'sensor_msgs/NavSatFix'
-  });
-
-  this.rosTopic.subscribe(this.processMessage.bind(this));
-};
-
-ROS3D.NavSatFix.prototype.processMessage = function(message){
-  var altitude = isNaN(message.altitude) ? this.altitudeNaN : message.altitude;
-  var pt = this.convert(message.longitude, message.latitude, altitude);
-
-  // move the group to the gps position
-  this.group.position.set(pt.x, pt.y, pt.z);
-  this.group.updateMatrix();
-
-  // copy the position twice in the circular buffer
-  // the second half replicates the first to allow a single drawRange
-  this.vertices.array[3*this.next1  ] = pt.x;
-  this.vertices.array[3*this.next1+1] = pt.y;
-  this.vertices.array[3*this.next1+2] = pt.z;
-  this.vertices.array[3*this.next2  ] = pt.x;
-  this.vertices.array[3*this.next2+1] = pt.y;
-  this.vertices.array[3*this.next2+2] = pt.z;
-  this.vertices.needsUpdate = true;
-
-  this.next1 = (this.next1+1) % this.keep;
-  this.next2 = this.next1 + this.keep;
-  this.count = Math.min(this.count+1, this.keep);
-  this.geom.setDrawRange(this.next2-this.count, this.count );
+  finishedUpdate(this.particles, n);
 };
 
 /**
  * @author David V. Lu!! - davidvlu@gmail.com
- * @author Mathieu Bredif - mathieu.bredif@ign.fr
  */
 
 /**
- * Decodes the base64-encoded array 'inbytes' into the array 'outbytes'
- * until 'inbytes' is exhausted or 'outbytes' is filled.
- * if 'record_size' is specified, records of length 'record_size' bytes
- * are copied every other 'pointRatio' records.
- * returns the number of decoded records
+ * A set of particles. Used by PointCloud2.
+ *
+ * @constructor
+ * @param options - object with following keys:
+ *
+ *  * tfClient - the TF client handle to use
+ *  * texture - (optional) Image url for a texture to use for the points. Defaults to a single white pixel.
+ *  * rootObject (optional) - the root object to add this marker to
+ *  * size (optional) - size to draw each point (default 0.05)
+ *  * max_pts (optional) - number of points to draw (default 100)
  */
-function decode64(inbytes, outbytes, record_size, pointRatio) {
-    var x,b=0,l=0,j=0,L=inbytes.length,A=outbytes.length;
-    record_size = record_size || A; // default copies everything (no skipping)
-    pointRatio = pointRatio || 1; // default copies everything (no skipping)
-    var bitskip = (pointRatio-1) * record_size * 8;
-    for(x=0;x<L&&j<A;x++){
-        b=(b<<6)+decode64.e[inbytes.charAt(x)];
-        l+=6;
-        if(l>=8){
-            l-=8;
-            outbytes[j++]=(b>>>l)&0xff;
-            if((j % record_size) === 0) { // skip records
-                // no    optimization: for(var i=0;i<bitskip;x++){l+=6;if(l>=8) {l-=8;i+=8;}}
-                // first optimization: for(;l<bitskip;l+=6){x++;} l=l%8;
-                x += Math.ceil((bitskip - l) / 6);
-                l = l % 8;
+ROS3D.Particles = function(options) {
+  options = options || {};
+  this.tfClient = options.tfClient;
+  var texture = options.texture || 'https://upload.wikimedia.org/wikipedia/commons/a/a2/Pixel-white.png';
+  var size = options.size || 0.05;
+  this.max_pts = options.max_pts || 10000;
+  this.first_size = null;
+  this.prev_pts = 0;
+  this.rootObject = options.rootObject || new THREE.Object3D();
+  var that = this;
+  THREE.Object3D.call(this);
 
-                if(l>0){b=decode64.e[inbytes.charAt(x)];}
-            }
+  this.vertex_shader = [
+    'attribute vec3 customColor;',
+    'attribute float alpha;',
+    'varying vec3 vColor;',
+    'varying float falpha;',
+    'void main() ',
+    '{',
+    '    vColor = customColor; // set color associated to vertex; use later in fragment shader',
+    '    vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );',
+    '    falpha = alpha; ',
+    '',
+    '    // option (1): draw particles at constant size on screen',
+    '    // gl_PointSize = size;',
+    '    // option (2): scale particles as objects in 3D space',
+    '    gl_PointSize = ', size, '* ( 300.0 / length( mvPosition.xyz ) );',
+    '    gl_Position = projectionMatrix * mvPosition;',
+    '}'
+    ].join('\n');
+
+  this.fragment_shader = [
+    'uniform sampler2D texture;',
+    'varying vec3 vColor; // colors associated to vertices; assigned by vertex shader',
+    'varying float falpha;',
+    'void main() ',
+    '{',
+    '    // THREE.Material.alphaTest is not evaluated for ShaderMaterial, so we',
+    '    // have to take care of this ourselves.',
+    '    if (falpha < 0.5) discard;',
+    '    // calculates a color for the particle',
+    '    gl_FragColor = vec4( vColor, falpha );',
+    '    // sets particle texture to desired color',
+    '    gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );',
+    '}'
+    ].join('\n');
+
+    this.geom = new THREE.Geometry();
+    for(var i=0;i<this.max_pts;i++){
+        this.geom.vertices.push(new THREE.Vector3( ));
+    }
+
+    var customUniforms =
+    {
+        texture:   { type: 't', value: THREE.ImageUtils.loadTexture( texture ) },
+    };
+
+    this.attribs =
+    {
+        customColor:   { type: 'c', value: [] },
+        alpha:         { type: 'f', value: [] }
+    };
+
+    this.shaderMaterial = new THREE.ShaderMaterial(
+    {
+        uniforms:          customUniforms,
+        attributes:        this.attribs,
+        vertexShader:      this.vertex_shader,
+        fragmentShader:    this.fragment_shader,
+        transparent: true,
+    });
+
+    this.ps = new THREE.ParticleSystem( this.geom, this.shaderMaterial );
+    this.sn = null;
+
+    this.points = this.geom.vertices;
+    this.colors = this.attribs.customColor.value;
+    this.alpha =  this.attribs.alpha.value;
+
+};
+
+function setFrame(particles, frame)
+{
+    if(particles.sn===null){
+        particles.sn = new ROS3D.SceneNode({
+            frameID : frame,
+            tfClient : particles.tfClient,
+            object : particles.ps
+        });
+
+        particles.rootObject.add(particles.sn);
+    }
+}
+
+function finishedUpdate(particles, n)
+{
+    if(particles.first_size === null){
+        particles.first_size = n;
+        particles.max_pts = Math.max(particles.max_pts, n);
+    }
+
+    for(var i=n; i<particles.prev_pts; i++){
+        particles.alpha[i] = 0.0;
+    }
+    particles.prev_pts = n;
+
+    particles.geom.verticesNeedUpdate = true;
+    particles.attribs.customColor.needsUpdate = true;
+    particles.attribs.alpha.needsUpdate = true;
+
+    if(n>particles.max_pts){
+        console.error('Attempted to draw more points than max_pts allows');
+    }
+}
+
+/**
+ * @author David V. Lu!! - davidvlu@gmail.com
+ */
+
+function read_point(msg, index, data_view){
+    var pt = [];
+    var base = msg.point_step * index;
+    var n = 4;
+    for(var fi=0; fi<msg.fields.length; fi++){
+        var si = base + msg.fields[fi].offset;
+
+        if( msg.fields[fi].name === 'rgb' ){
+            pt[ 'rgb' ] = data_view.getInt32(si, 1);
+        }else{
+            pt[ msg.fields[fi].name ] = data_view.getFloat32(si, 1);
         }
     }
-    return Math.floor(j/record_size);
+    return pt;
 }
-// initialize decoder with static lookup table 'e'
-decode64.S='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-decode64.e={};
-for(var i=0;i<64;i++){decode64.e[decode64.S.charAt(i)]=i;}
 
+var BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+function decode64(x) {
+    var a = [], z = 0, bits = 0;
+
+    for (var i = 0, len = x.length; i < len; i++) {
+      z += BASE64.indexOf( x[i] );
+      bits += 6;
+      if(bits>=8){
+          bits -= 8;
+          a.push(z >> bits);
+          z = z & (Math.pow(2, bits)-1);
+      }
+      z = z << 6;
+    }
+    return a;
+}
 
 /**
  * A PointCloud2 client that listens to a given topic and displays the points.
@@ -3721,21 +3742,21 @@ for(var i=0;i<64;i++){decode64.e[decode64.S.charAt(i)]=i;}
  * @param options - object with following keys:
  *
  *  * ros - the ROSLIB.Ros connection handle
- *  * topic - the marker topic to listen to (default: '/points')
+ *  * topic - the marker topic to listen to
  *  * tfClient - the TF client handle to use
- *  * rootObject (optional) - the root object to add this marker to use for the points.
- *  * max_pts (optional) - number of points to draw (default: 10000)
- *  * pointRatio (optional) - point subsampling ratio (default: 1, no subsampling)
- *  * messageRatio (optional) - message subsampling ratio (default: 1, no subsampling)
- *  * material (optional) - a material object or an option to construct a PointsMaterial.
- *  * colorsrc (optional) - the field to be used for coloring (default: 'rgb')
- *  * colormap (optional) - function that turns the colorsrc field value to a color
+ *  * texture - (optional) Image url for a texture to use for the points. Defaults to a single white pixel.
+ *  * rootObject (optional) - the root object to add this marker to
+ *  * size (optional) - size to draw each point (default 0.05)
+ *  * max_pts (optional) - number of points to draw (default 100)
+ *  * color (optional) - point color (otherwise taken from the topic)
  */
 ROS3D.PointCloud2 = function(options) {
   options = options || {};
   this.ros = options.ros;
   this.topicName = options.topic || '/points';
-  this.points = new ROS3D.Points(options);
+  this.color = options.color;
+
+  this.particles = new ROS3D.Particles(options);
   this.rosTopic = undefined;
   this.subscribe();
 };
@@ -3760,162 +3781,29 @@ ROS3D.PointCloud2.prototype.subscribe = function(){
   this.rosTopic.subscribe(this.processMessage.bind(this));
 };
 
-ROS3D.PointCloud2.prototype.processMessage = function(msg){
-  if(!this.points.setup(msg.header.frame_id, msg.point_step, msg.fields)) {
-      return;
+ROS3D.PointCloud2.prototype.processMessage = function(message){
+  setFrame(this.particles, message.header.frame_id);
+
+  var n = message.height*message.width;
+  var buffer;
+  if(message.data.buffer){
+    buffer = message.data.buffer.buffer;
+  }else{
+    buffer = Uint8Array.from(decode64(message.data)).buffer;
+  }
+  var dv = new DataView(buffer);
+  var color;
+  if(this.color !== undefined){
+    color = new THREE.Color(this.color);
+  }
+  for(var i=0;i<n;i++){
+    var pt = read_point(message, i, dv);
+    this.particles.points[i] = new THREE.Vector3( pt['x'], pt['y'], pt['z'] );
+    this.particles.colors[ i ] = color || new THREE.Color( pt['rgb'] );
+    this.particles.alpha[i] = 1.0;
   }
 
-  var n, pointRatio = this.points.positionRatio;
-
-  if (msg.data.buffer) {
-    this.points.buffer = msg.data.buffer;
-    n = msg.height*msg.width / pointRatio;
-  } else {
-    n = decode64(msg.data, this.points.buffer, msg.point_step, pointRatio);
-    pointRatio = 1;
-  }
-
-  var dv = new DataView(this.points.buffer.buffer);
-  var littleEndian = !msg.is_bigendian;
-  var x = this.points.fields.x.offset;
-  var y = this.points.fields.y.offset;
-  var z = this.points.fields.z.offset;
-  var base, color;
-  for(var i = 0; i < n; i++){
-    base = i * pointRatio * msg.point_step;
-    this.points.positions.array[3*i    ] = dv.getFloat32(base+x, littleEndian);
-    this.points.positions.array[3*i + 1] = dv.getFloat32(base+y, littleEndian);
-    this.points.positions.array[3*i + 2] = dv.getFloat32(base+z, littleEndian);
-
-    if(this.points.colors){
-        color = this.points.colormap(this.points.getColor(dv,base,littleEndian));
-        this.points.colors.array[3*i    ] = color.r;
-        this.points.colors.array[3*i + 1] = color.g;
-        this.points.colors.array[3*i + 2] = color.b;
-    }
-  }
-  this.points.update(n);
-};
-
-/**
- * @author David V. Lu!! - davidvlu@gmail.com
- * @author Mathieu Bredif - mathieu.bredif@ign.fr
- */
-
-/**
- * A set of points. Used by PointCloud2 and LaserScan.
- *
- * @constructor
- * @param options - object with following keys:
- *
- *  * tfClient - the TF client handle to use
- *  * rootObject (optional) - the root object to add this marker to use for the points.
- *  * max_pts (optional) - number of points to draw (default: 10000)
- *  * pointRatio (optional) - point subsampling ratio (default: 1, no subsampling)
- *  * messageRatio (optional) - message subsampling ratio (default: 1, no subsampling)
- *  * material (optional) - a material object or an option to construct a PointsMaterial.
- *  * colorsrc (optional) - the field to be used for coloring (default: 'rgb')
- *  * colormap (optional) - function that turns the colorsrc field value to a color
- */
-ROS3D.Points = function(options) {
-  options = options || {};
-  this.tfClient = options.tfClient;
-  this.rootObject = options.rootObject || new THREE.Object3D();
-  this.max_pts = options.max_pts || 10000;
-  this.pointRatio = options.pointRatio || 1;
-  this.messageRatio = options.messageRatio || 1;
-  this.messageCount = 0;
-  this.material = options.material || {};
-  this.colorsrc = options.colorsrc;
-  this.colormap = options.colormap;
-  THREE.Object3D.call(this);
-
-  if(('color' in options) || ('size' in options) || ('texture' in options)) {
-      console.warn(
-        'toplevel "color", "size" and "texture" options are deprecated.' +
-        'They should beprovided within a "material" option, e.g. : '+
-        ' { tfClient, material : { color: mycolor, size: mysize, map: mytexture }, ... }'
-      );
-  }
-
-  this.sn = null;
-  this.buffer = null;
-};
-
-ROS3D.Points.prototype.setup = function(frame, point_step, fields)
-{
-    if(this.sn===null){
-        // scratch space to decode base64 buffers
-        if(point_step) {
-            this.buffer = new Uint8Array( this.max_pts * point_step );
-        }
-        // turn fields to a map
-        fields = fields || [];
-        this.fields = {};
-        for(var i=0; i<fields.length; i++) {
-            this.fields[fields[i].name] = fields[i];
-        }
-        this.geom = new THREE.BufferGeometry();
-
-        this.positions = new THREE.BufferAttribute( new Float32Array( this.max_pts * 3), 3, false );
-        this.geom.addAttribute( 'position', this.positions.setDynamic(true) );
-
-        if(!this.colorsrc && this.fields.rgb) {
-            this.colorsrc = 'rgb';
-        }
-        if(this.colorsrc) {
-            var field = this.fields[this.colorsrc];
-            if (field) {
-                this.colors = new THREE.BufferAttribute( new Float32Array( this.max_pts * 3), 3, false );
-                this.geom.addAttribute( 'color', this.colors.setDynamic(true) );
-                var offset = field.offset;
-                this.getColor = [
-                    function(dv,base,le){return dv.getInt8(base+offset,le);},
-                    function(dv,base,le){return dv.getUint8(base+offset,le);},
-                    function(dv,base,le){return dv.getInt16(base+offset,le);},
-                    function(dv,base,le){return dv.getUint16(base+offset,le);},
-                    function(dv,base,le){return dv.getInt32(base+offset,le);},
-                    function(dv,base,le){return dv.getUint32(base+offset,le);},
-                    function(dv,base,le){return dv.getFloat32(base+offset,le);},
-                    function(dv,base,le){return dv.getFloat64(base+offset,le);}
-                ][field.datatype-1];
-                this.colormap = this.colormap || function(x){return new THREE.Color(x);};
-            } else {
-                console.warn('unavailable field "' + this.colorsrc + '" for coloring.');
-            }
-        }
-
-        if(!this.material.isMaterial) { // if it is an option, apply defaults and pass it to a PointsMaterial
-            if(this.colors && this.material.vertexColors === undefined) {
-                this.material.vertexColors = THREE.VertexColors;
-            }
-            this.material = new THREE.PointsMaterial(this.material);      
-        }
-
-        this.object = new THREE.Points( this.geom, this.material );
-
-        this.sn = new ROS3D.SceneNode({
-            frameID : frame,
-            tfClient : this.tfClient,
-            object : this.object
-        });
-
-        this.rootObject.add(this.sn);
-    }
-    return (this.messageCount++ % this.messageRatio) === 0;
-};
-
-ROS3D.Points.prototype.update = function(n)
-{
-  this.geom.setDrawRange(0,n);
-
-  this.positions.needsUpdate = true;
-  this.positions.updateRange.count = n * this.positions.itemSize;
-
-  if (this.colors) {
-    this.colors.needsUpdate = true;
-    this.colors.updateRange.count = n * this.colors.itemSize;
-  }
+  finishedUpdate(this.particles, n);
 };
 
 /**
