@@ -17,8 +17,9 @@
    */
   function init() {
     // Connect to ROS.
+    //  url : 'ws://localhost:9090'
     var ros = new ROSLIB.Ros({
-      url : 'ws://localhost:9090'
+    url : 'ws://uwgraphics-P35V6:9090'
     });
 
     // Create the main viewer.
@@ -35,16 +36,18 @@
     // Setup a client to listen to TFs.
     var tfClient = new ROSLIB.TFClient({
       ros : ros,
-      angularThres : 0.01,
-      transThres : 0.01,
-      rate : 10.0
+      angularThres : 0.001,
+      transThres : 0.001,
+      rate : 100.0
     });
 
     // Setup the URDF client.
     var urdfClient = new ROS3D.UrdfClient({
       ros : ros,
       tfClient : tfClient,
-      path : 'http://resources.robotwebtools.org/',
+      // path : 'http://resources.robotwebtools.org/',
+      // path : 'https://raw.githubusercontent.com/PR2/pr2_common/kinetic-devel/',
+      path: '../',
       rootObject : viewer.scene,
     });
   }
@@ -52,7 +55,7 @@
 </head>
 
 <body onload="init()">
-  <h1>Simple URDF Example</h1>
+  <!-- <h1>Simple URDF Example</h1>
   <p>Run the following commands in the terminal then refresh this page.</p>
   <ol>
     <li><tt>roslaunch pr2_description upload_pr2.launch</tt></li>
@@ -61,7 +64,7 @@
     <li><tt>rosrun joint_state_publisher joint_state_publisher</tt></li>
     <li><tt>rosrun tf2_web_republisher tf2_web_republisher</tt></li>
     <li><tt>roslaunch rosbridge_server rosbridge_websocket.launch</tt></li>
-  </ol>
+  </ol> -->
   <div id="urdf"></div>
 </body>
 </html>
