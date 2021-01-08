@@ -26,7 +26,7 @@
     // Connect to ROS.
     //  url : 'ws://localhost:9090'
     var ros = new ROSLIB.Ros({
-    url : 'ws://uwgraphics-P35V6:9090'
+    url : 'ws://34.121.50.74:9090'
     });
 
     // Create the main viewer.
@@ -70,7 +70,7 @@
       range : 'min',
       min : 0,
       max : 100,
-      value : 90,
+      value : 30,
       slide : function(event, ui) {
         // Change the speed label.
         $('#speed-label').html('Speed: ' + ui.value + '%');
@@ -83,6 +83,7 @@
     $('#speed-label').html('Speed: ' + ($('#speed-slider').slider('value')) + '%');
     teleop.scale = ($('#speed-slider').slider('value') / 100.0);
   }
+
 </script>
 </head>
 
