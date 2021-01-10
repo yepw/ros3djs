@@ -1,0 +1,139 @@
+body{
+    background-color: #272727;
+}
+
+h1{
+    font-style: Fantasy;
+    color: #E3E2DF;
+    font-size: 1.8em;
+    text-align:center
+}
+
+h2{
+    font-style: Fantasy;
+    color: #D1E8E2;
+    font-size: 1.2em;
+    text-align:center
+}
+
+h3{
+    font-style: Fantasy;
+    color: #D1E8E2;
+    font-size: 1.2em;
+    text-align:left;
+    margin-top: 10pt;
+    margin-left: 10pt;
+    margin-bottom: 0;
+}
+
+h4{
+    font-style: Fantasy;
+    color: #D1E8E2;
+    font-size: 1 em;
+    text-align:left;
+    margin-top: 5pt;
+    margin-left: 10pt;
+    margin-bottom: 0;
+    font-weight:normal;
+}
+
+
+.loss-div {
+    float:  none;
+    height: 400px;
+    width: 1500px;
+}
+
+.left-div {
+    float:left;
+    height: 600px;
+    width: 600px;
+}
+
+.animation-div {
+    float:none;
+    height: 300px;
+    width: 300px;
+}
+
+.row-flex-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+}
+
+.column-flex-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.loss-line {
+    fill: none;
+    stroke: steelblue;
+    stroke-width: 1.5px;
+}
+
+.loss-mouse-line {
+    stroke: #D1E8E2;
+    stroke-width: 1px;
+}
+
+.mouse-line {
+    stroke: #D1E8E2;
+    stroke-width: 1px;
+}
+
+
+.circle{
+    stroke: #D1E8E2;
+    stroke-width: 1px;
+    fill: none;
+}
+
+.circle text{
+    fill: #D1E8E2;
+    font-size: 1em;
+}
+
+.loss-mouse-per-line text{
+    fill: #D1E8E2;
+    font-size: 1em;
+}
+
+.loss-fixed-mouse-line {
+    stroke: #D1E8E2;
+    stroke-width: 1px;
+}
+
+.loss-mouse-over-effects text {
+    fill: #D1E8E2;
+    font-size: 1em;
+    text-anchor:middle;
+}
+
+.legend text {
+    fill: #D1E8E2;
+    font-size: 1.2em;
+    text-anchor:Front;
+}
+
+.axisLight line{
+    stroke: #D1E8E2;
+}
+
+.axisLight path{
+    stroke: #D1E8E2;
+}
+
+.axisLight text{
+    fill: #D1E8E2;
+    font-size: 1.2em;
+}  
+
+.textColor{
+    fill: #D1E8E2;
+    font-size: 1em;
+}

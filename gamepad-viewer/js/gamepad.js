@@ -7,7 +7,7 @@ class Gamepad {
     /**
      * Creates an instance of Gamepad.
      */
-    constructor() {
+    constructor(options) {
         // cached DOM references
         this.$body = $("body");
         this.$gamepad = $("#gamepad");
@@ -93,7 +93,8 @@ class Gamepad {
         this.colorName = null;
         this.triggersMeter = false;
         this.zoomMode = "auto";
-        this.zoomLevel = 1;
+        // this.zoomLevel = 1;
+        this.zoomLevel = 0.5;
         this.mapping = {
             buttons: [],
             axes: [],
@@ -142,6 +143,16 @@ class Gamepad {
 
         // by default, enqueue a delayed display of the instructions animation
         this.displayInstructions();
+
+        // added by Yeping
+        this.ros = options.ros;
+        this.topic = options.topic || '/web_input';
+        this.cmdVel = new ROSLIB.Topic({
+          ros : this.ros,
+          name : this.topic,
+          messageType : 'geometry_msgs/Twist'
+        });
+        console.log(this.cmdVel);
     }
 
     assertGamepadAPI() {
@@ -625,6 +636,25 @@ class Gamepad {
                 $axis.attr("data-value-z", axis);
             }
 
+            let speed = 0.005;
+            if (index == 1 || index ==3) {
+                let axisX = $axis.attr("data-value-x");
+                let axisY = $axis.attr("data-value-y");
+                let twist = new ROSLIB.Message({
+                    angular : {
+                      x : 0,
+                      y : 0,
+                      z : 0
+                    },
+                    linear : {
+                      x : axisX * speed,
+                      y : axisY * speed,
+                      z : 0
+                    }
+                  });
+                  if (Math.abs(axisX)>1e-4 || Math.abs(axisY)>1e-4 )
+                  this.cmdVel.publish(twist);
+            }
             // hook the template defined axis update method
             if ("function" === typeof this.updateAxis) {
                 this.updateAxis($axis);
@@ -735,7 +765,7 @@ class Gamepad {
         if (typeof level === "undefined") return;
 
         this.zoomMode = level === "auto" ? "auto" : "manual";
-
+        /*
         if (level === "auto") {
             // "auto" means a "contained in window" zoom, with a max zoom of 1
             this.zoomLevel = Math.min(
@@ -756,15 +786,23 @@ class Gamepad {
             // an integer value means a value-based zoom
             this.zoomLevel = level;
         }
-
+        */
         // hack: fix js float issues
         this.zoomLevel = +this.zoomLevel.toFixed(2);
 
         // update the DOM with the zoom value
+        console.log(this.zoomLevel);
+        /*
         this.$gamepad.css(
             "transform",
             `translate(-50%, -50%) scale(${this.zoomLevel}, ${this.zoomLevel})`
         );
+        */
+        this.$gamepad.css(
+            "transform",
+            `translate(0%, 0%) scale(${this.zoomLevel}, ${this.zoomLevel})`
+        );
+
 
         // update current settings
         this.updateUrlParams({
@@ -939,4 +977,4 @@ class Gamepad {
     }
 }
 
-window.gamepad = new Gamepad();
+// window.gamepad = new Gamepad();
