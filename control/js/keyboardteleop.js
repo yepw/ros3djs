@@ -25,7 +25,7 @@ KEYBOARDTELEOP.Teleop = function(options) {
   var ros = options.ros;
   var topic = options.topic || '/cmd_vel';
   // permanent throttle
-  var throttle = options.throttle || 0.02;
+  var throttle = options.throttle || 0.05;
   let canvasid = options.canvasid || undefined;
   // used to externally throttle the speed (e.g., from a slider)
   this.scale = 1.0;

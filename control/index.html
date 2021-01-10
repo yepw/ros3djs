@@ -58,6 +58,14 @@
       rootObject : viewer.scene,
     });
 
+    // Setup the marker client.
+    var markerClient = new ROS3D.MarkerClient({
+      ros : ros,
+      tfClient : tfClient,
+      topic : '/visualization_marker',
+      lifetime : 0,
+      rootObject : viewer.scene
+    });
 
     // Initialize the teleop.
     var teleop = new KEYBOARDTELEOP.Teleop({
@@ -108,6 +116,10 @@
         <canvas id="keyboard_canvas" height="500" width="500"></canvas>
       </div>
     </div>
+    <div class="row-flex-container"> 
+      <iframe src="../gamepad-viewer/index.html" style="height:500px;width:500px;"> </iframe>
+    </div>
+
 </div>
 <div id="speed-label"></div>
 <div id="speed-slider"></div>
