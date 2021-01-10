@@ -152,7 +152,6 @@ class Gamepad {
           name : this.topic,
           messageType : 'geometry_msgs/Twist'
         });
-        console.log(this.cmdVel);
     }
 
     assertGamepadAPI() {

@@ -18,6 +18,7 @@
 <script src="https://static.robotwebtools.org/roslibjs/current/roslib.js"></script>
 <script src="../build/ros3d.js"></script>
 <script src="js/keyboardteleop.js"></script>
+<script src="js/mouseteleop.js"></script>
 <script src="../gamepad-viewer/js/gamepad.js"></script>
 <script src="js/ColladaLoader.js"></script> <!-- override the default ColladaLoader -->
 
@@ -77,6 +78,13 @@
       canvasid  : 'keyboard_canvas'
     });
 
+    // Initialize the teleop mouse.
+    let mousetele = new MOUSETELEOP.Teleop({
+      ros : ros,
+      topic : '/relaxed_ik/ee_pose_goals',
+      canvasid  : 'mouse_canvas'
+    });
+
      // Initialize the joystick.
      window.gamepad = new Gamepad({
       ros : ros,
@@ -130,7 +138,12 @@
       <!-- <iframe src="../gamepad-viewer/index.html" style="height:500px;width:500px;"> </iframe> -->
 
 	    <!-- <script src="../gamepad-viewer/js/gamepad.js"></script> -->
-	    <div id="gamepad" style="border: thin solid gray"></div> 
+      <div id="gamepad" style="border: thin solid gray"> Press </div>   
+      <div id="mouse" style="border: thin solid gray">
+        <canvas id="mouse_canvas" width="400" height="400">
+          Your browser does not support HTML5 canvas
+        </canvas>
+      </div>
     </div>
 
 </div>
