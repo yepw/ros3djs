@@ -4,11 +4,11 @@
 }
 
 #gamepad[data-color="black"] {
-    background-image: url(base-black.svg);
+    background-image: url(base-white.svg);
 }
 
 #gamepad[data-color="white"] {
-    background-image: url(base-white.svg);
+    background-image: url(base-black.svg);
 }
 
 #gamepad.disconnected {

@@ -72,7 +72,7 @@ class Gamepad {
             "xbox-one": {
                 id: /045e|xinput|XInput/, // 045e = Microsoft vendor code, xinput = standard Windows controller
                 name: "Xbox One",
-                colors: ["black", "white"],
+                colors: ["white", "black"],
             },
         };
 
@@ -90,7 +90,8 @@ class Gamepad {
         this.lastTimestamp = null;
         this.backgroundStyleIndex = 0;
         this.colorIndex = null;
-        this.colorName = null;
+        this.colorName = "white";
+        this.$gamepad.attr("data-color", this.colorName);
         this.triggersMeter = false;
         this.zoomMode = "auto";
         // this.zoomLevel = 1;
@@ -516,7 +517,7 @@ class Gamepad {
 
             // read for parameters to apply:
             // - color
-            this.changeGamepadColor(this.getUrlParam("color"));
+            // this.changeGamepadColor(this.getUrlParam("color"));
             // - triggers mode
             this.toggleTriggersMeter(this.getUrlParam("triggers") === "meter");
             // - zoom$
@@ -646,8 +647,8 @@ class Gamepad {
                       z : 0
                     },
                     linear : {
-                      x : axisX * speed,
-                      y : axisY * speed,
+                      x : -axisY * speed,
+                      y : -axisX * speed,
                       z : 0
                     }
                   });
@@ -708,6 +709,7 @@ class Gamepad {
      * @param {any} color
      */
     changeGamepadColor(color) {
+        console.log("changeGamepadColor", color);
         // ensure that a gamepad is currently active
         if (this.index === null) return;
 
@@ -790,7 +792,6 @@ class Gamepad {
         this.zoomLevel = +this.zoomLevel.toFixed(2);
 
         // update the DOM with the zoom value
-        console.log(this.zoomLevel);
         /*
         this.$gamepad.css(
             "transform",

@@ -2,7 +2,7 @@
  * @author Yeping Wang 
  */
 
-var MOUSETELEOP = MOUSETELEOP || {
+var MOUSEMOVEMENTNOCLICK = MOUSEMOVEMENTNOCLICK || {
   REVISION : '0.4.0-SNAPSHOT'
 };
 
@@ -18,7 +18,7 @@ var MOUSETELEOP = MOUSETELEOP || {
  *   * topic (optional) - the Twist topic to publish to, like '/cmd_vel'
  *   * throttle (optional) - a constant throttle for the speed
  */
-MOUSETELEOP.Teleop = function(options) {
+MOUSEMOVEMENTNOCLICK.Teleop = function(options) {
   let that = this;
   options = options || {};
   let ros = options.ros;
@@ -29,12 +29,8 @@ MOUSETELEOP.Teleop = function(options) {
   // used to externally throttle the speed (e.g., from a slider)
   this.scale = 1.0;
 
-  // linear x and y movement and angular z movement
-  let x = 0;
-  let y = 0;
-  let z = 0;
   let pub = true;
-  let speed = 0.0001;
+  let speed = 0.0002;
 
   let cmdVel = new ROSLIB.Topic({
     ros : ros,
@@ -51,9 +47,18 @@ MOUSETELEOP.Teleop = function(options) {
 
   // setup of the canvas
 
-  let canvas = document.getElementById('mouse_canvas');
+  let canvas = document.getElementById('mouse_movement_no_click_canvas');
   let context = canvas.getContext('2d');
   
+  // linear x and y movement and angular z movement
+  let x =  canvas.width / 2;
+  let y =  canvas.height / 2;
+  let z = 0;
+
+  let oldX = x;
+  let oldY = y;
+  let oldZ = z;
+
   function canvasDraw() {
     context.fillStyle = "black";
     context.fillRect(0, 0, canvas.width, canvas.height);
@@ -76,7 +81,7 @@ MOUSETELEOP.Teleop = function(options) {
   canvas.requestPointerLock();
   };
 
-  console.log("before addEventListener");
+
   document.addEventListener('pointerlockchange', lockChangeAlert, false);
   document.addEventListener('mozpointerlockchange', lockChangeAlert, false);
   
@@ -94,28 +99,31 @@ MOUSETELEOP.Teleop = function(options) {
 
   let animation;
   function updatePosition(e) {
-    let oldX = x;
-    let oldY = y;
-    let oldZ = z;
-
     x += e.movementX;
     y += e.movementY;
     if (x > canvas.width + RADIUS) {
-      x = -RADIUS;
+      x = canvas.width - RADIUS;
     }
     if (y > canvas.height + RADIUS) {
-      y = -RADIUS;
+      y = canvas.height - RADIUS;
     }  
     if (x < -RADIUS) {
-      x = canvas.width + RADIUS;
+      x = RADIUS;
     }
     if (y < -RADIUS) {
-      y = canvas.height + RADIUS;
+      y = RADIUS;
     }
     // tracker.textContent = "X position: " + x + ", Y position: " + y;
      // publish the command
+    
+    if (!animation) {
+      animation = requestAnimationFrame(function() {
+        animation = null;
+        canvasDraw();
+      });
+    }
 
-     if (pub === true) {
+    if (pub === true) {
       var twist = new ROSLIB.Message({
         angular : {
           x : 0,
@@ -123,25 +131,17 @@ MOUSETELEOP.Teleop = function(options) {
           z : 0
         },
         linear : {
-          x : (x - canvas.width/2)*speed,
-          y : (y - canvas.height/2)*speed,
+          x : -(y - canvas.height/2)*speed ,
+          y : -(x - canvas.width/2)*speed,
           z : 0
         }
       });
       cmdVel.publish(twist);
 
-      // check for changes
-      if (oldX !== x || oldY !== y || oldZ !== z) {
-        that.emit('change', twist);
-      }
-
-      if (!animation) {
-        animation = requestAnimationFrame(function() {
-          animation = null;
-          canvasDraw();
-        });
-      }
     }
+    x = canvas.width / 2;
+    y = canvas.height / 2;
+  
   }
 };
 
