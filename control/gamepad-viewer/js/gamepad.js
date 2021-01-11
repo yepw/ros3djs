@@ -94,8 +94,8 @@ class Gamepad {
         this.$gamepad.attr("data-color", this.colorName);
         this.triggersMeter = false;
         this.zoomMode = "auto";
-        // this.zoomLevel = 1;
-        this.zoomLevel = 0.5;
+        //this.zoomLevel = 1;
+        this.zoomLevel = 0.4;
         this.mapping = {
             buttons: [],
             axes: [],
@@ -490,7 +490,7 @@ class Gamepad {
         this.identifier = null;
         this.colorIndex = null;
         this.colorName = null;
-        this.zoomLevel = 1;
+        this.zoomLevel = 0.5;
         this.$gamepad.empty();
         this.clearUrlParams();
 
@@ -968,12 +968,14 @@ class Gamepad {
      * @param {*} newParams
      */
     updateUrlParams(newParams) {
+        console.log(newParams);
+        console.log(document.title);
         const params = Object.assign(this.getUrlParams(), newParams);
         const query = Object.entries(params)
             .filter(([, value]) => value !== undefined)
             .map(([key, value]) => `${key}=${value}`)
             .join("&");
-        window.history.replaceState({}, document.title, `/?${query}`);
+        window.history.replaceState({}, document.title, `/control/?${query}`);
     }
 }
 

@@ -1,5 +1,14 @@
+html{
+    color: #D1E8E2;
+}
+
 body{
     background-color: #272727;
+}
+
+p{
+    padding-left: 10px;
+    padding-right: 5px;
 }
 
 h1{
@@ -37,23 +46,28 @@ h4{
     font-weight:normal;
 }
 
-
-.loss-div {
-    float:  none;
-    height: 400px;
-    width: 1500px;
-}
-
-.left-div {
-    float:left;
-    height: 600px;
-    width: 600px;
-}
-
-.animation-div {
+#introduction-div {
     float:none;
-    height: 300px;
-    width: 300px;
+    height: 350px;
+    width: 500px;
+}
+
+#keyboard-div {
+    float:none;
+    height: 250px;
+    width: 500px;
+}
+
+#mouse-position-div {
+    float:none;
+    height: 200px;
+    width: 400px;
+}
+
+#mouse-movement-div {
+    float:none;
+    height: 200px;
+    width: 400px;
 }
 
 .row-flex-container {
@@ -70,70 +84,29 @@ h4{
     justify-content: center;
 }
 
-.loss-line {
-    fill: none;
-    stroke: steelblue;
-    stroke-width: 1.5px;
-}
-
-.loss-mouse-line {
-    stroke: #D1E8E2;
-    stroke-width: 1px;
-}
-
-.mouse-line {
-    stroke: #D1E8E2;
-    stroke-width: 1px;
-}
-
-
-.circle{
-    stroke: #D1E8E2;
-    stroke-width: 1px;
-    fill: none;
-}
-
-.circle text{
-    fill: #D1E8E2;
-    font-size: 1em;
-}
-
-.loss-mouse-per-line text{
-    fill: #D1E8E2;
-    font-size: 1em;
-}
-
-.loss-fixed-mouse-line {
-    stroke: #D1E8E2;
-    stroke-width: 1px;
-}
-
-.loss-mouse-over-effects text {
-    fill: #D1E8E2;
-    font-size: 1em;
-    text-anchor:middle;
-}
-
-.legend text {
-    fill: #D1E8E2;
-    font-size: 1.2em;
-    text-anchor:Front;
-}
-
-.axisLight line{
-    stroke: #D1E8E2;
-}
-
-.axisLight path{
-    stroke: #D1E8E2;
-}
-
-.axisLight text{
-    fill: #D1E8E2;
-    font-size: 1.2em;
-}  
-
 .textColor{
     fill: #D1E8E2;
     font-size: 1em;
+}
+
+.ui-slider .ui-slider-handle {
+    height: 20px;
+    width: 1200px;
+    padding-left: 5px; 
+}
+
+.ui-slider-horizontal {
+    height: 8px;
+    margin-left: 30pt;
+    width: 1600px;
+}
+
+#gamepad-div {
+    height: 400px;
+    width: 500px;
+}
+
+#speed-div {
+    height: 150px;
+    width: 1700px;
 }

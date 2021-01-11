@@ -27,10 +27,10 @@ MOUSETELEOP.Teleop = function(options) {
   let throttle = options.throttle || 0.05;
   let canvasid = options.canvasid || undefined;
   // used to externally throttle the speed (e.g., from a slider)
-  this.scale = 1.0;
+  this.scale = 0.3;
 
   let pub = true;
-  let speed = 0.003;
+  let speed = 0.004;
 
   let cmdVel = new ROSLIB.Topic({
     ros : ros,
@@ -39,6 +39,7 @@ MOUSETELEOP.Teleop = function(options) {
   });
 
   let RADIUS = 20;
+  let dotColor = "#ff0000"
 
   function degToRad(degrees) {
     var result = Math.PI / 180 * degrees;
@@ -56,9 +57,26 @@ MOUSETELEOP.Teleop = function(options) {
   let z = 0;
 
   function canvasDraw() {
-    context.fillStyle = "black";
+    context.fillStyle = "#272727";
     context.fillRect(0, 0, canvas.width, canvas.height);
-    context.fillStyle = "#f00";
+
+    context.beginPath();
+    context.moveTo( 0, canvas.height/2);
+    context.lineTo(canvas.width, canvas.height/2);
+    for (let i=1; i<=9; i++) {
+      context.moveTo(canvas.width/10*i, canvas.height/2);
+      context.lineTo(canvas.width/10*i, canvas.height/2+10);
+    }
+    context.moveTo( canvas.width/2 , 0);
+    context.lineTo(canvas.width/2, canvas.height);
+    for (let i=1; i<=9; i++) {
+      context.moveTo(canvas.width/2-10, canvas.height/10*i);
+      context.lineTo(canvas.width/2, canvas.height/10*i);
+    }
+    context.strokeStyle = "#D1E8E2";
+    context.stroke();
+
+    context.fillStyle = dotColor;
     context.beginPath();
     context.arc(x, y, RADIUS, 0, degToRad(360), true);
     context.fill();
@@ -74,20 +92,22 @@ MOUSETELEOP.Teleop = function(options) {
   document.mozExitPointerLock;
 
   canvas.onclick = function() {
-  canvas.requestPointerLock();
+    canvas.requestPointerLock();
   };
 
   document.addEventListener('pointerlockchange', lockChangeAlert, false);
   document.addEventListener('mozpointerlockchange', lockChangeAlert, false);
   
   function lockChangeAlert() {
-    console.log("lockChangeAlert");
     if (document.pointerLockElement === canvas ||
         document.mozPointerLockElement === canvas) {
-      console.log('The pointer lock status is now locked');
+      console.log('The pointer is now LOCKED in Mouse Position control panel');
+      dotColor = "#00ff00"
       document.addEventListener("mousemove", updatePosition, false);
     } else {
-      console.log('The pointer lock status is now unlocked');  
+      console.log('The pointer is now UNLOCKED in Mouse Position control panel'); 
+      dotColor = "#ff0000" 
+      canvasDraw();
       document.removeEventListener("mousemove", updatePosition, false);
     }
   }
@@ -100,16 +120,16 @@ MOUSETELEOP.Teleop = function(options) {
 
     x += e.movementX;
     y += e.movementY;
-    if (x > canvas.width + RADIUS) {
+    if (x > canvas.width - RADIUS) {
       x = canvas.width - RADIUS;
     }
-    if (y > canvas.height + RADIUS) {
+    if (y > canvas.height - RADIUS) {
       y = canvas.height - RADIUS;
     }  
-    if (x < -RADIUS) {
+    if (x < RADIUS) {
       x = RADIUS;
     }
-    if (y < -RADIUS) {
+    if (y < RADIUS) {
       y = RADIUS;
     }
     // tracker.textContent = "X position: " + x + ", Y position: " + y;
@@ -129,8 +149,8 @@ MOUSETELEOP.Teleop = function(options) {
             w : 1
           },
           position : {
-            x : -(y - canvas.height/2)*speed ,
-            y : -(x - canvas.width/2)*speed ,
+            x : -(y - canvas.height/2)*speed * that.scale,
+            y : -(x - canvas.width/2)*speed * that.scale,
             z : 0
           }
         } ]

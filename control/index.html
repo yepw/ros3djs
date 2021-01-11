@@ -22,7 +22,7 @@
 <script src="js/mouseteleopVel1.js"></script>
 <script src="js/MouseMovement.js"></script> -
 <script src="js/MouseMovementNoClick.js"></script>
-<script src="../gamepad-viewer/js/gamepad.js"></script>
+<script src="gamepad-viewer/js/gamepad.js"></script>
 <script src="js/ColladaLoader.js"></script> <!-- override the default ColladaLoader -->
 
 <script>
@@ -39,7 +39,7 @@
     // Create the main viewer.
     var viewer = new ROS3D.Viewer({
       divID : 'urdf',
-      width : 800,
+      width : 600,
       height : 600,
       antialias : true,
       background : '#272727',
@@ -56,9 +56,9 @@
     // Setup a client to listen to TFs.
     var tfClient = new ROSLIB.TFClient({
       ros : ros,
-      angularThres : 0.001,
-      transThres : 0.001,
-      rate : 100.0
+      angularThres : 0.002,
+      transThres : 0.002,
+      rate : 50.0
     });
 
     // Setup the URDF client.
@@ -167,14 +167,16 @@
       value : 30,
       slide : function(event, ui) {
         // Change the speed label.
-        $('#speed-label').html('Speed: ' + ui.value + '%');
+        $('#speed-label').html('  Input Scale: ' + ui.value + '%');
         // Scale the speed.
         teleop.scale = (ui.value / 100.0);
+        mousetele.scale = (ui.value / 100.0);
+        mouseMovementNoClick.scale = (ui.value / 100.0);
       }
     });
 
     // Set the initial speed .
-    $('#speed-label').html('Speed: ' + ($('#speed-slider').slider('value')) + '%');
+    $('#speed-label').html('   Input Scale: ' + ($('#speed-slider').slider('value')) + '%');
     teleop.scale = ($('#speed-slider').slider('value') / 100.0);
   }
 
@@ -197,20 +199,49 @@
     <div class="row-flex-container"> 
       <div id="urdf" style="border: thin solid gray"></div>
       <div id="urdf2" style="border: thin solid gray"></div>
-      <div id="keyboard" style="border: thin solid gray">
-        <h3> Keyboard Control</h3>   
-        <canvas id="keyboard_canvas" height="500" width="500"></canvas>
+      <div class="column-flex-container">
+        <div id="introduction-div" style="border: thin solid gray">
+          <h3>Introduction </h3>
+          <p> You are controlling a virtual robot that is running on a Google Cloud server. The robot is controlled using RelaxedIK and ROS.</p>
+          <p> Views on the left visualize the same robot from different viewpoints. You can press the left mouse button to rotate the viewpoints, roll the mouse wheel to zoom in/out, or press the mouse wheel to move the scene. </p>
+          <p> If you press an arrow key on your keyboard, you should see the robot moves and a green arrow visualizes the current target pose of the RelaxedIK solver. 
+            The green arrow is mainly to demonstrate latency. Your command was sent to the server, spatial transformed in ROS, sent back to you, and shown on your screen.
+            You might feel the robot movement to be laggy, that's because the robot need to accelerate and decelerate.  
+          </p>
+          <p> Currently, you can only move the robot in  the X-Y (ground) plane. To prevent singular poses, you are not able to move the gripper too far away. </p>
+        </div>
+        <div id="keyboard-div" style="border: thin solid gray">
+          <h3> Keyboard Control</h3>   
+          <p> The arrow keys on your keyboard allow you to move the robot. </p>
+          <div style="text-align:center">
+            <canvas id="keyboard_canvas" height="200" width="200"></canvas>
+          </div>
+        </div>
       </div>
-      <div id="gamepad" style="border: thin solid gray"> Press </div>   
     </div>
     <div class="row-flex-container"> 
       <!-- <iframe src="../gamepad-viewer/index.html" style="height:500px;width:500px;"> </iframe> -->
 
 	    <!-- <script src="../gamepad-viewer/js/gamepad.js"></script> -->
-      <div id="mouse" style="border: thin solid gray">
+      <div style="border: thin solid gray; border-right-width: 0">
         <canvas id="mouse_canvas" width="400" height="400">
           Your browser does not support HTML5 canvas
         </canvas>
+      </div>
+      <div class="column-flex-container">
+        <div id="mouse-position-div" style="border: thin solid gray; border-left-width: 0">
+          <h3> Mouse Position Control</h3>   
+          <p> 1. Click the LEFT red dot. Your cursor should be disappeared and the red dot should become green. </p>
+          <p> 2. Move your mouse to move the green dot and control the robot. </p>
+          <p> 3. To exit, just press the ESC button on your keyboard. </p>
+        </div>
+        <div id="mouse-movement-div" style="border: thin solid gray; border-right-width: 0">
+          <h3> Mouse Movement Control</h3>   
+          <p> 1. Click the RIGHT red dot. Your cursor should be disappeared and the red dot should become green. </p>
+          <p> 2. Move your mouse to generate a movement input. (The green dot won't move) </p>
+          <p> 3. To exit, just press the ESC button on your keyboard. </p>
+        </div>
+
       </div>
       <!-- <div id="mouse_vel_1" style="border: thin solid gray">
         <canvas id="mouse_vel_1_canvas" width="400" height="400">
@@ -222,15 +253,26 @@
           Your browser does not support HTML5 canvas
         </canvas>
       </div> -->
-      <div id="mouse_movement_no_click" style="border: thin solid gray">
+      <div style="border: thin solid gray;  border-left-width: 0">
         <canvas id="mouse_movement_no_click_canvas" width="400" height="400">
           Your browser does not support HTML5 canvas
         </canvas>
       </div>
-    </div>
 
-</div>
-<div id="speed-label"></div>
-<div id="speed-slider"></div>
+      <div id="gamepad-div" style="border: thin solid gray"> 
+        <h3> Joystick Control</h3>   
+        <p> 1. Plug in your joystick. Press any button on the joystick for 1 second. You should see a joystick pops out down here. 
+         If not, try to refresh the page. </p>
+        <p> 2. Move the axes to control the robot. </p>
+      </div>   
+    </div>
+    <div id="speed-div" style="border: thin solid gray">
+      <h3> Input Scale</h3>   
+      <p> Move the slider to adjust your input scale. (Not the robot speed). Currently, the scale doesn't work for joystick control. </p>
+      <div id="speed-label"></div>
+      <div id="speed-slider" style="height:50; width:1200"></div>
+    </div>
+  </div>
+  <div id="gamepad"> </div>
 </body>
 </html>

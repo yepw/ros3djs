@@ -1,14 +1,17 @@
 #gamepad {
     height: 630px;
     width: 750px;
+    position: absolute;
+    left: 61%;
+    top: 600px;
 }
 
 #gamepad[data-color="black"] {
-    background-image: url(base-white.svg);
+    background-image: url(base-black.svg);
 }
 
 #gamepad[data-color="white"] {
-    background-image: url(base-black.svg);
+    background-image: url(base-white.svg);
 }
 
 #gamepad.disconnected {

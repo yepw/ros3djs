@@ -28,7 +28,7 @@ KEYBOARDTELEOP.Teleop = function(options) {
   var throttle = options.throttle || 0.05;
   let canvasid = options.canvasid || undefined;
   // used to externally throttle the speed (e.g., from a slider)
-  this.scale = 1.0;
+  this.scale = 0.3;
 
   // linear x and y movement and angular z movement
   var x = 0;
