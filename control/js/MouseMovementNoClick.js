@@ -60,19 +60,64 @@ MOUSEMOVEMENTNOCLICK.Teleop = function(options) {
   let oldY = y;
   let oldZ = z;
 
+  let queueX = [];
+  let queueY = [];
+  let avgX;
+  let avgY;
+
+  function avgXY() {
+    let totalX = 0;
+    let totalY = 0;
+    for(let i = 0; i < queueX.length; i++) {
+        totalX += queueX[i];
+        totalY += queueY[i];
+    }
+    avgX = totalX / queueX.length;
+    avgY = totalY / queueY.length;
+  }
+
   function canvasDraw() {
+    context.save();
     context.fillStyle = "#272727";
     context.fillRect(0, 0, canvas.width, canvas.height);
 
     context.beginPath();
-    context.arc(x, y, RADIUS*5, 0, degToRad(360), true);
+    context.arc(canvas.width / 2, canvas.height / 2, RADIUS*5, 0, degToRad(360), true);
     context.strokeStyle = "#D1E8E2";
     context.stroke();
 
     context.fillStyle = dotColor;
     context.beginPath();
-    context.arc(x, y, RADIUS, 0, degToRad(360), true);
+    context.arc(canvas.width / 2, canvas.height / 2, RADIUS, 0, degToRad(360), true);
     context.fill();
+    
+    queueX.push(x);
+    queueY.push(y);
+
+    avgXY();
+
+    if (queueX.length > 5) {
+      queueX.shift();
+      queueY.shift();
+    }
+
+    let angle = Math.atan2(avgY - oldY, avgX - oldX);
+    let length = Math.sqrt( Math.pow(avgY - oldY, 2) + 
+                            Math.pow(avgX - oldX, 2));
+    if (length > 10 && (oldX != x || oldY != y)) {
+      context.translate(canvas.width / 2, 200);
+      context.rotate(angle);
+      context.beginPath();
+      context.moveTo(0, 0);
+      context.lineTo(length, 0);
+      context.lineTo(length - 10, 10);
+      context.moveTo(length, 0);
+      context.lineTo(length - 10, -10);
+      context.lineWidth = 3;
+      context.stroke();
+    } else {
+    }
+    context.restore();
   }
   canvasDraw();
 
@@ -107,7 +152,6 @@ MOUSEMOVEMENTNOCLICK.Teleop = function(options) {
     }
   }
 
-  let animation;
   function updatePosition(e) {
     x += e.movementX;
     y += e.movementY;
@@ -126,12 +170,7 @@ MOUSEMOVEMENTNOCLICK.Teleop = function(options) {
     // tracker.textContent = "X position: " + x + ", Y position: " + y;
      // publish the command
     
-    if (!animation) {
-      animation = requestAnimationFrame(function() {
-        animation = null;
-        canvasDraw();
-      });
-    }
+    canvasDraw();
 
     if (pub === true) {
       var twist = new ROSLIB.Message({
@@ -149,8 +188,8 @@ MOUSEMOVEMENTNOCLICK.Teleop = function(options) {
       cmdVel.publish(twist);
 
     }
-    x = canvas.width / 2;
-    y = canvas.height / 2;
+    x = oldX;
+    y = oldY;
   
   }
 };
